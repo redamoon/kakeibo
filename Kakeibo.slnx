@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Kakeibo.Core/Kakeibo.Core.csproj" />
+    <Project Path="src/Kakeibo.Desktop/Kakeibo.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Kakeibo.Core.Tests/Kakeibo.Core.Tests.csproj" />
+  </Folder>
+</Solution>

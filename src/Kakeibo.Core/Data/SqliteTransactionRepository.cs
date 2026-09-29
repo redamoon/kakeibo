@@ -1,0 +1,100 @@
+using Kakeibo.Core.Accounts;
+using Kakeibo.Core.Transactions;
+
+namespace Kakeibo.Core.Data;
+
+public sealed class SqliteTransactionRepository(
+    KakeiboDatabase database,
+    ICurrentUser currentUser,
+    TimeProvider timeProvider) : ITransactionRepository
+{
+    public async Task<IReadOnlyList<Transaction>> GetByMonthAsync(int year, int month)
+    {
+        var from = TransactionRow.FormatDate(new DateOnly(year, month, 1));
+        var to = TransactionRow.FormatDate(new DateOnly(year, month, 1).AddMonths(1));
+        var userId = currentUser.UserId;
+
+        var connection = await database.GetConnectionAsync();
+        // sqlite-net の LINQ は文字列の大小比較を変換できないため、SQL で書く
+        var rows = await connection.QueryAsync<TransactionRow>(
+            """
+            SELECT * FROM transactions
+            WHERE user_id = ? AND deleted = 0 AND date >= ? AND date < ?
+            ORDER BY date DESC, updated_at DESC
+            """,
+            userId, from, to);
+
+        return rows.Select(r => r.ToModel()).ToList();
+    }
+
+    public async Task<Transaction?> FindAsync(Guid id)
+    {
+        var row = await FindRowAsync(id);
+        return row?.ToModel();
+    }
+
+    public async Task<Transaction> AddAsync(TransactionDraft draft)
+    {
+        draft.Validate();
+
+        var row = new TransactionRow
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = currentUser.UserId,
+            UpdatedAt = Now(),
+            Version = 1,
+        };
+        row.Apply(draft);
+
+        var connection = await database.GetConnectionAsync();
+        await connection.InsertAsync(row);
+        return row.ToModel();
+    }
+
+    public async Task<Transaction> UpdateAsync(Guid id, TransactionDraft draft)
+    {
+        draft.Validate();
+
+        var row = await FindRowAsync(id) ?? throw new KeyNotFoundException($"明細 {id} が見つかりません。");
+        row.Apply(draft);
+        Touch(row);
+
+        var connection = await database.GetConnectionAsync();
+        await connection.UpdateAsync(row);
+        return row.ToModel();
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var row = await FindRowAsync(id);
+        if (row is null)
+        {
+            return;
+        }
+
+        row.Deleted = true;
+        Touch(row);
+
+        var connection = await database.GetConnectionAsync();
+        await connection.UpdateAsync(row);
+    }
+
+    private async Task<TransactionRow?> FindRowAsync(Guid id)
+    {
+        var key = id.ToString();
+        var userId = currentUser.UserId;
+
+        var connection = await database.GetConnectionAsync();
+        return await connection.Table<TransactionRow>()
+            .Where(r => r.Id == key && r.UserId == userId && !r.Deleted)
+            .FirstOrDefaultAsync();
+    }
+
+    private void Touch(TransactionRow row)
+    {
+        row.UpdatedAt = Now();
+        row.Version++;
+    }
+
+    private long Now() => timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
+}

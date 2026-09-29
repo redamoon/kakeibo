@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Kakeibo.Desktop.Views.TransactionListPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Kakeibo.Desktop.ViewModels"
+    x:DataType="vm:TransactionListViewModel"
+    Title="明細">
+
+    <Grid RowDefinitions="Auto,*" Padding="24,16" RowSpacing="16">
+
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+            <Button Text="‹" Command="{Binding PreviousMonthCommand}" SemanticProperties.Description="前の月" />
+            <Label Grid.Column="1" Text="{Binding MonthText}" FontSize="22" FontAttributes="Bold"
+                   HorizontalOptions="Center" VerticalOptions="Center" />
+            <Button Grid.Column="2" Text="›" Command="{Binding NextMonthCommand}" SemanticProperties.Description="次の月" />
+            <Button Grid.Column="3" Text="追加" Command="{Binding AddCommand}" Margin="16,0,0,0" />
+        </Grid>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="この月の明細はまだありません。" HorizontalOptions="Center" Margin="0,48"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:TransactionItemViewModel">
+                    <Grid ColumnDefinitions="100,*,Auto" Padding="8,12" ColumnSpacing="12">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding EditCommand, Source={RelativeSource AncestorType={x:Type vm:TransactionListViewModel}}, x:DataType=vm:TransactionListViewModel}"
+                                CommandParameter="{Binding .}" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="{Binding DateText}" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                            <Label Text="{Binding Category}" FontAttributes="Bold" />
+                            <Label Text="{Binding Memo}" IsVisible="{Binding HasMemo}" FontSize="12"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="2" Text="{Binding AmountText}" VerticalOptions="Center" FontAttributes="Bold">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsIncome}" Value="True">
+                                    <Setter Property="TextColor" Value="#1E8E3E" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
