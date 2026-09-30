@@ -3,7 +3,7 @@ using Kakeibo.Core.Transactions;
 namespace Kakeibo.Desktop.ViewModels;
 
 /// <summary>帳簿の1行分の表示内容。</summary>
-public sealed class TransactionItemViewModel(LedgerRow row)
+public sealed class TransactionItemViewModel(LedgerRow row, string categoryName)
 {
     public Transaction Transaction => row.Transaction;
 
@@ -11,7 +11,7 @@ public sealed class TransactionItemViewModel(LedgerRow row)
 
     public string DateText => row.Transaction.Date.ToString("M/d (ddd)");
 
-    public string Category => row.Transaction.Category;
+    public string Category => categoryName;
 
     public string Memo => row.Transaction.Memo;
 

@@ -9,7 +9,7 @@ public sealed record Transaction(
     DateOnly Date,
     TransactionKind Kind,
     long Amount,
-    string Category,
+    Guid CategoryId,
     string Memo,
     DateTimeOffset UpdatedAt,
     long Version,
@@ -22,7 +22,7 @@ public sealed record TransactionDraft(
     DateOnly Date,
     TransactionKind Kind,
     long Amount,
-    string Category,
+    Guid CategoryId,
     string Memo)
 {
     public void Validate()
@@ -32,9 +32,9 @@ public sealed record TransactionDraft(
             throw new ArgumentOutOfRangeException(nameof(Amount), Amount, "金額は1円以上で入力してください。");
         }
 
-        if (string.IsNullOrWhiteSpace(Category))
+        if (CategoryId == Guid.Empty)
         {
-            throw new ArgumentException("カテゴリを入力してください。", nameof(Category));
+            throw new ArgumentException("カテゴリを選択してください。", nameof(CategoryId));
         }
     }
 }

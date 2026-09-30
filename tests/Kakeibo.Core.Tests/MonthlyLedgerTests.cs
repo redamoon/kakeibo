@@ -7,7 +7,7 @@ public sealed class MonthlyLedgerTests
     private static readonly DateTimeOffset BaseTime = new(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
 
     private static Transaction Tx(int day, TransactionKind kind, long amount, int minutes = 0) => new(
-        Guid.NewGuid(), "local", new DateOnly(2026, 9, day), kind, amount, "カテゴリ", "",
+        Guid.NewGuid(), "local", new DateOnly(2026, 9, day), kind, amount, Guid.NewGuid(), "",
         BaseTime.AddMinutes(minutes), 1, false);
 
     [Fact]

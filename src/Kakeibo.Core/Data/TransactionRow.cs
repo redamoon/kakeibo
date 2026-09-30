@@ -27,8 +27,8 @@ internal sealed class TransactionRow
     [Column("amount"), NotNull]
     public long Amount { get; set; }
 
-    [Column("category"), NotNull]
-    public string Category { get; set; } = "";
+    [Column("category_id"), NotNull]
+    public string CategoryId { get; set; } = "";
 
     [Column("memo"), NotNull]
     public string Memo { get; set; } = "";
@@ -51,7 +51,7 @@ internal sealed class TransactionRow
         DateOnly.ParseExact(Date, DateFormat, System.Globalization.CultureInfo.InvariantCulture),
         (TransactionKind)Kind,
         Amount,
-        Category,
+        Guid.Parse(CategoryId),
         Memo,
         DateTimeOffset.FromUnixTimeMilliseconds(UpdatedAt),
         Version,
@@ -62,7 +62,7 @@ internal sealed class TransactionRow
         Date = FormatDate(draft.Date);
         Kind = (int)draft.Kind;
         Amount = draft.Amount;
-        Category = draft.Category.Trim();
+        CategoryId = draft.CategoryId.ToString();
         Memo = draft.Memo.Trim();
     }
 }

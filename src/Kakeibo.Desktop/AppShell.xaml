@@ -4,11 +4,17 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:Kakeibo.Desktop.Views"
-    Title="家計簿">
+    Title="家計簿"
+    FlyoutBehavior="Locked"
+    FlyoutWidth="160">
 
-    <ShellContent
-        Title="明細"
-        ContentTemplate="{DataTemplate views:MonthlyTransactionsPage}"
-        Route="transactions" />
+    <!-- デスクトップ向けに、左側のサイドバーで画面を切り替える -->
+    <FlyoutItem Title="明細">
+        <ShellContent ContentTemplate="{DataTemplate views:MonthlyTransactionsPage}" Route="transactions" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="設定">
+        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="settings" />
+    </FlyoutItem>
 
 </Shell>

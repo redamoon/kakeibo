@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Kakeibo.Core.Categories;
 using Kakeibo.Core.Transactions;
 
 namespace Kakeibo.Desktop.ViewModels;
@@ -13,12 +14,20 @@ namespace Kakeibo.Desktop.ViewModels;
 public sealed partial class MonthlyTransactionsViewModel : ObservableObject
 {
     private readonly ITransactionRepository _repository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly TimeProvider _timeProvider;
     private DateOnly _month;
 
-    public MonthlyTransactionsViewModel(ITransactionRepository repository, TimeProvider timeProvider)
+    /// <summary>論理削除済みも含めた全カテゴリ。過去の明細のカテゴリ名を表示するのに使う。</summary>
+    private Dictionary<Guid, Category> _categories = [];
+
+    public MonthlyTransactionsViewModel(
+        ITransactionRepository repository,
+        ICategoryRepository categoryRepository,
+        TimeProvider timeProvider)
     {
         _repository = repository;
+        _categoryRepository = categoryRepository;
         _timeProvider = timeProvider;
         _month = FirstDayOf(Today());
         Date = DefaultDate();
@@ -65,8 +74,12 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
     [ObservableProperty]
     public partial string AmountText { get; set; } = "";
 
+    /// <summary>入力欄のカテゴリの選択肢。支出/収入の選択に合わせて絞り込む。</summary>
     [ObservableProperty]
-    public partial string Category { get; set; } = "";
+    public partial IReadOnlyList<Category> CategoryOptions { get; set; } = [];
+
+    [ObservableProperty]
+    public partial Category? SelectedCategory { get; set; }
 
     [ObservableProperty]
     public partial string Memo { get; set; } = "";
@@ -80,13 +93,18 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadAsync()
     {
+        // 設定画面でカテゴリが変わっていることがあるので、毎回読み直す
+        var categories = await _categoryRepository.GetAllAsync();
+        _categories = categories.ToDictionary(c => c.Id);
+        RefreshCategoryOptions(SelectedItem?.Transaction.CategoryId);
+
         var transactions = await _repository.GetByMonthAsync(_month.Year, _month.Month);
         var ledger = MonthlyLedger.Build(transactions);
 
         Items.Clear();
         foreach (var row in ledger.Rows)
         {
-            Items.Add(new TransactionItemViewModel(row));
+            Items.Add(new TransactionItemViewModel(row, CategoryNameOf(row.Transaction.CategoryId)));
         }
 
         IncomeTotalText = Money.Format(ledger.IncomeTotal);
@@ -114,7 +132,7 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
             DateOnly.FromDateTime(Date),
             IsExpense ? TransactionKind.Expense : TransactionKind.Income,
             amount,
-            Category,
+            SelectedCategory?.Id ?? Guid.Empty,
             Memo);
 
         try
@@ -179,11 +197,34 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
         var transaction = value.Transaction;
         Date = transaction.Date.ToDateTime(TimeOnly.MinValue);
         IsExpense = transaction.Kind == TransactionKind.Expense;
+        // 削除済みのカテゴリの明細でも、そのカテゴリのまま編集できるよう選択肢に含める
+        RefreshCategoryOptions(transaction.CategoryId);
+        SelectedCategory = _categories.GetValueOrDefault(transaction.CategoryId);
         AmountText = transaction.Amount.ToString(CultureInfo.InvariantCulture);
-        Category = transaction.Category;
         Memo = transaction.Memo;
         ErrorMessage = null;
     }
+
+    partial void OnIsExpenseChanged(bool value) => RefreshCategoryOptions(SelectedItem?.Transaction.CategoryId);
+
+    /// <summary>
+    /// 選択中の種類(支出/収入)の有効なカテゴリで選択肢を作り直す。
+    /// <paramref name="include"/> のカテゴリは、削除済みでも同じ種類なら選択肢に加える。
+    /// </summary>
+    private void RefreshCategoryOptions(Guid? include)
+    {
+        var kind = IsExpense ? TransactionKind.Expense : TransactionKind.Income;
+        var selectedId = SelectedCategory?.Id;
+
+        CategoryOptions = _categories.Values
+            .Where(c => c.Kind == kind && (!c.Deleted || c.Id == include))
+            .OrderBy(c => c.SortOrder)
+            .ToList();
+        SelectedCategory = CategoryOptions.FirstOrDefault(c => c.Id == selectedId);
+    }
+
+    private string CategoryNameOf(Guid id) =>
+        _categories.TryGetValue(id, out var category) ? category.Name : "(不明なカテゴリ)";
 
     private async Task ShowMonthAsync(DateOnly month)
     {
@@ -204,7 +245,7 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
         }
 
         AmountText = "";
-        Category = "";
+        SelectedCategory = null;
         Memo = "";
         ErrorMessage = null;
         EntryReset?.Invoke(this, EventArgs.Empty);

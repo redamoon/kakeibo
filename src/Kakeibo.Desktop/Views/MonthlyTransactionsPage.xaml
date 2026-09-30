@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Kakeibo.Desktop.ViewModels"
+    xmlns:categories="clr-namespace:Kakeibo.Core.Categories;assembly=Kakeibo.Core"
     x:DataType="vm:MonthlyTransactionsViewModel"
     Title="明細">
 
@@ -74,8 +75,10 @@
                     </HorizontalStackLayout>
                     <Entry x:Name="AmountEntry" Grid.Row="1" Grid.Column="2" Text="{Binding AmountText}"
                            Keyboard="Numeric" Placeholder="1000" ReturnCommand="{Binding SaveCommand}" />
-                    <Entry Grid.Row="1" Grid.Column="3" Text="{Binding Category}" Placeholder="食費"
-                           ReturnCommand="{Binding SaveCommand}" />
+                    <Picker Grid.Row="1" Grid.Column="3" Title="選択してください"
+                            ItemsSource="{Binding CategoryOptions}"
+                            SelectedItem="{Binding SelectedCategory}"
+                            ItemDisplayBinding="{Binding Name, x:DataType=categories:Category}" />
                     <Entry Grid.Row="1" Grid.Column="4" Text="{Binding Memo}" ReturnCommand="{Binding SaveCommand}" />
 
                     <HorizontalStackLayout Grid.Row="1" Grid.Column="5" Spacing="8">

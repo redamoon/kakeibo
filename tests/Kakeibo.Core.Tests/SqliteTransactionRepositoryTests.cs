@@ -1,32 +1,30 @@
 using Kakeibo.Core.Accounts;
+using Kakeibo.Core.Categories;
 using Kakeibo.Core.Data;
 using Kakeibo.Core.Transactions;
-using Microsoft.Extensions.Time.Testing;
 
 namespace Kakeibo.Core.Tests;
 
-public sealed class SqliteTransactionRepositoryTests : IAsyncLifetime
+public sealed class SqliteTransactionRepositoryTests : TestDatabase
 {
-    private readonly string _path = Path.Combine(Path.GetTempPath(), $"kakeibo-test-{Guid.NewGuid()}.db3");
-    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero));
-    private KakeiboDatabase _database = null!;
     private SqliteTransactionRepository _repository = null!;
+    private Category _food = null!;
+    private Category _goods = null!;
+    private Category _salary = null!;
 
-    public Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
-        _database = new KakeiboDatabase(_path);
-        _repository = new SqliteTransactionRepository(_database, new LocalUser(), _clock);
-        return Task.CompletedTask;
+        await base.InitializeAsync();
+        _repository = new SqliteTransactionRepository(Database, User, Clock);
+
+        var categories = await new SqliteCategoryRepository(Database, User, Clock).GetAllAsync();
+        _food = categories.Single(c => c is { Kind: TransactionKind.Expense, Name: "食費" });
+        _goods = categories.Single(c => c is { Kind: TransactionKind.Expense, Name: "日用品" });
+        _salary = categories.Single(c => c is { Kind: TransactionKind.Income, Name: "給与" });
     }
 
-    public async Task DisposeAsync()
-    {
-        await _database.DisposeAsync();
-        File.Delete(_path);
-    }
-
-    private static TransactionDraft Draft(DateOnly date, long amount = 1000, string category = "食費") =>
-        new(date, TransactionKind.Expense, amount, category, "");
+    private TransactionDraft Draft(DateOnly date, long amount = 1000, Category? category = null) =>
+        new(date, (category ?? _food).Kind, amount, (category ?? _food).Id, "");
 
     [Fact]
     public async Task Add_sets_sync_metadata()
@@ -35,7 +33,8 @@ public sealed class SqliteTransactionRepositoryTests : IAsyncLifetime
 
         Assert.NotEqual(Guid.Empty, added.Id);
         Assert.Equal(LocalUser.LocalUserId, added.UserId);
-        Assert.Equal(_clock.GetUtcNow(), added.UpdatedAt);
+        Assert.Equal(_food.Id, added.CategoryId);
+        Assert.Equal(Clock.GetUtcNow(), added.UpdatedAt);
         Assert.Equal(1, added.Version);
         Assert.False(added.Deleted);
         Assert.Equal(added, await _repository.FindAsync(added.Id));
@@ -45,14 +44,14 @@ public sealed class SqliteTransactionRepositoryTests : IAsyncLifetime
     public async Task Update_bumps_version_and_updated_at()
     {
         var added = await _repository.AddAsync(Draft(new DateOnly(2026, 9, 1)));
-        _clock.Advance(TimeSpan.FromMinutes(5));
+        Clock.Advance(TimeSpan.FromMinutes(5));
 
-        var updated = await _repository.UpdateAsync(added.Id, Draft(new DateOnly(2026, 9, 2), amount: 2500, category: " 日用品 "));
+        var updated = await _repository.UpdateAsync(added.Id, Draft(new DateOnly(2026, 9, 2), amount: 2500, category: _goods));
 
         Assert.Equal(added.Id, updated.Id);
         Assert.Equal(new DateOnly(2026, 9, 2), updated.Date);
         Assert.Equal(2500, updated.Amount);
-        Assert.Equal("日用品", updated.Category);
+        Assert.Equal(_goods.Id, updated.CategoryId);
         Assert.Equal(2, updated.Version);
         Assert.Equal(added.UpdatedAt.AddMinutes(5), updated.UpdatedAt);
     }
@@ -70,7 +69,7 @@ public sealed class SqliteTransactionRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetByMonth_returns_only_that_month_newest_first()
+    public async Task GetByMonth_returns_only_that_month()
     {
         await _repository.AddAsync(Draft(new DateOnly(2026, 8, 31)));
         var first = await _repository.AddAsync(Draft(new DateOnly(2026, 9, 1)));
@@ -79,30 +78,61 @@ public sealed class SqliteTransactionRepositoryTests : IAsyncLifetime
 
         var result = await _repository.GetByMonthAsync(2026, 9);
 
-        Assert.Equal([last.Id, first.Id], result.Select(t => t.Id));
+        // 並び順は MonthlyLedger が決めるので、ここでは件数と中身だけを確かめる
+        Assert.Equal(new[] { first.Id, last.Id }.Order(), result.Select(t => t.Id).Order());
     }
 
     [Fact]
     public async Task Other_users_rows_are_not_visible()
     {
         var added = await _repository.AddAsync(Draft(new DateOnly(2026, 9, 1)));
-        var otherUser = new SqliteTransactionRepository(_database, new FixedUser("someone-else"), _clock);
+        var otherUser = new SqliteTransactionRepository(Database, new FixedUser("someone-else"), Clock);
 
         Assert.Null(await otherUser.FindAsync(added.Id));
         Assert.Empty(await otherUser.GetByMonthAsync(2026, 9));
     }
 
     [Theory]
-    [InlineData(0, "食費")]
-    [InlineData(-100, "食費")]
-    [InlineData(100, " ")]
-    public async Task Invalid_draft_is_rejected(long amount, string category)
+    [InlineData(0)]
+    [InlineData(-100)]
+    public async Task Non_positive_amount_is_rejected(long amount)
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _repository.AddAsync(Draft(new DateOnly(2026, 9, 1), amount, category)));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _repository.AddAsync(Draft(new DateOnly(2026, 9, 1), amount)));
     }
 
-    private sealed class FixedUser(string userId) : ICurrentUser
+    [Fact]
+    public async Task Category_must_be_selected()
     {
-        public string UserId => userId;
+        var draft = new TransactionDraft(new DateOnly(2026, 9, 1), TransactionKind.Expense, 100, Guid.Empty, "");
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _repository.AddAsync(draft));
+    }
+
+    [Fact]
+    public async Task Category_kind_must_match_transaction_kind()
+    {
+        var draft = new TransactionDraft(new DateOnly(2026, 9, 1), TransactionKind.Expense, 100, _salary.Id, "");
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _repository.AddAsync(draft));
+    }
+
+    [Fact]
+    public async Task Other_users_category_is_rejected()
+    {
+        var otherCategories = await new SqliteCategoryRepository(Database, new FixedUser("someone-else"), Clock).GetAllAsync();
+        var othersFood = otherCategories.Single(c => c is { Kind: TransactionKind.Expense, Name: "食費" });
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _repository.AddAsync(Draft(new DateOnly(2026, 9, 1), category: othersFood)));
+    }
+
+    [Fact]
+    public async Task Transaction_with_deleted_category_can_still_be_edited()
+    {
+        var added = await _repository.AddAsync(Draft(new DateOnly(2026, 9, 1)));
+        await new SqliteCategoryRepository(Database, User, Clock).DeleteAsync(_food.Id);
+
+        var updated = await _repository.UpdateAsync(added.Id, Draft(new DateOnly(2026, 9, 1), amount: 1200));
+
+        Assert.Equal(_food.Id, updated.CategoryId);
     }
 }

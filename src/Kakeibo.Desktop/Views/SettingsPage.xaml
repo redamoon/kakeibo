@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Kakeibo.Desktop.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Kakeibo.Desktop.ViewModels"
+    xmlns:categories="clr-namespace:Kakeibo.Core.Categories;assembly=Kakeibo.Core"
+    x:DataType="vm:CategorySettingsViewModel"
+    Title="設定">
+
+    <ContentPage.Resources>
+        <!-- カテゴリ1行分。ボタンは親の ViewModel のコマンドを呼ぶ -->
+        <DataTemplate x:Key="CategoryRowTemplate" x:DataType="categories:Category">
+            <Grid ColumnDefinitions="*,Auto" Padding="8,6" ColumnSpacing="8">
+                <Label Text="{Binding Name}" VerticalOptions="Center" />
+                <HorizontalStackLayout Grid.Column="1" Spacing="4">
+                    <Button Text="↑" Padding="10,4" SemanticProperties.Description="上へ"
+                            Command="{Binding MoveUpCommand, Source={RelativeSource AncestorType={x:Type vm:CategorySettingsViewModel}}, x:DataType=vm:CategorySettingsViewModel}"
+                            CommandParameter="{Binding .}" />
+                    <Button Text="↓" Padding="10,4" SemanticProperties.Description="下へ"
+                            Command="{Binding MoveDownCommand, Source={RelativeSource AncestorType={x:Type vm:CategorySettingsViewModel}}, x:DataType=vm:CategorySettingsViewModel}"
+                            CommandParameter="{Binding .}" />
+                    <Button Text="名前変更" Padding="10,4"
+                            Command="{Binding RenameCommand, Source={RelativeSource AncestorType={x:Type vm:CategorySettingsViewModel}}, x:DataType=vm:CategorySettingsViewModel}"
+                            CommandParameter="{Binding .}" />
+                    <Button Text="削除" Padding="10,4" BackgroundColor="#D93025" TextColor="White"
+                            Command="{Binding DeleteCommand, Source={RelativeSource AncestorType={x:Type vm:CategorySettingsViewModel}}, x:DataType=vm:CategorySettingsViewModel}"
+                            CommandParameter="{Binding .}" />
+                </HorizontalStackLayout>
+            </Grid>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24,16" Spacing="16">
+            <Label Text="カテゴリ" FontSize="22" FontAttributes="Bold" />
+            <Label Text="明細の入力で選べるカテゴリです。並び順は入力欄の選択肢の順になります。"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="支出" FontSize="18" FontAttributes="Bold" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding ExpenseCategories}"
+                                         BindableLayout.ItemTemplate="{StaticResource CategoryRowTemplate}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry Text="{Binding NewExpenseName}" Placeholder="新しいカテゴリ名"
+                               ReturnCommand="{Binding AddExpenseCommand}" />
+                        <Button Grid.Column="1" Text="追加" Command="{Binding AddExpenseCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="8">
+                    <Label Text="収入" FontSize="18" FontAttributes="Bold" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding IncomeCategories}"
+                                         BindableLayout.ItemTemplate="{StaticResource CategoryRowTemplate}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry Text="{Binding NewIncomeName}" Placeholder="新しいカテゴリ名"
+                               ReturnCommand="{Binding AddIncomeCommand}" />
+                        <Button Grid.Column="1" Text="追加" Command="{Binding AddIncomeCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

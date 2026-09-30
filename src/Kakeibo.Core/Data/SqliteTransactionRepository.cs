@@ -35,7 +35,7 @@ public sealed class SqliteTransactionRepository(
 
     public async Task<Transaction> AddAsync(TransactionDraft draft)
     {
-        draft.Validate();
+        await ValidateAsync(draft);
 
         var row = new TransactionRow
         {
@@ -53,7 +53,7 @@ public sealed class SqliteTransactionRepository(
 
     public async Task<Transaction> UpdateAsync(Guid id, TransactionDraft draft)
     {
-        draft.Validate();
+        await ValidateAsync(draft);
 
         var row = await FindRowAsync(id) ?? throw new KeyNotFoundException($"明細 {id} が見つかりません。");
         row.Apply(draft);
@@ -77,6 +77,27 @@ public sealed class SqliteTransactionRepository(
 
         var connection = await database.GetConnectionAsync();
         await connection.UpdateAsync(row);
+    }
+
+    /// <summary>
+    /// 入力内容を検証する。カテゴリは論理削除済みでもよい(削除前に登録した明細を編集できるように)が、
+    /// 利用者本人のもので、明細と同じ種類(支出/収入)である必要がある。
+    /// </summary>
+    private async Task ValidateAsync(TransactionDraft draft)
+    {
+        draft.Validate();
+
+        var key = draft.CategoryId.ToString();
+        var userId = currentUser.UserId;
+        var connection = await database.GetConnectionAsync();
+        var category = await connection.Table<CategoryRow>()
+            .Where(r => r.Id == key && r.UserId == userId)
+            .FirstOrDefaultAsync();
+
+        if (category is null || category.Kind != (int)draft.Kind)
+        {
+            throw new ArgumentException("カテゴリを選択し直してください。", nameof(draft));
+        }
     }
 
     private async Task<TransactionRow?> FindRowAsync(Guid id)
