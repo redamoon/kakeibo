@@ -1,155 +1,159 @@
-# 家計簿
+# Kakeibo
 
-個人開発の家計簿アプリです。明細を記録し、月ごとの収支やカテゴリ別の内訳を確認できます。
+English | [日本語](README.ja.md)
 
-現在はデスクトップ版(macOS / Windows)をオフラインで動かすところまでできています。ログインとクラウド同期、Web 版はこれから作ります。
+A household budget book ("kakeibo") app, developed as a personal project. Record your income and expenses, and review monthly balances and breakdowns by category.
 
-- [アーキテクチャ](docs/architecture.md): 全体構成、データ設計、決定事項と未決事項
-- [ユビキタス言語](docs/ubiquitous-language.md): 用語集
+The desktop app (macOS / Windows) currently works offline. Sign-in, cloud sync, and a web app are planned.
 
-![明細画面](docs/images/transactions.png)
+The app UI is in Japanese. This README shows the Japanese label next to its English meaning, for example **明細** (Transactions).
 
-## 機能
+- [Architecture](docs/architecture.md) (Japanese): system overview, data design, decisions and open questions
+- [Ubiquitous language](docs/ubiquitous-language.md) (Japanese): glossary
 
-- 明細(日付・支出/収入・金額・カテゴリ・メモ)の追加・編集・削除
-- 月ごとの明細を、前月繰越からの残高つきの帳簿形式で表示
-- 年ごとの月別推移(収入・支出・差額・月末残高)と、月のカテゴリ別内訳
-- カテゴリの追加・名前変更・並べ替え・削除
+![Transactions screen](docs/images/transactions.png)
 
-## 使い方
+## Features
 
-画面左のサイドバーで「明細」「集計」「設定」を切り替えます。
+- Add, edit, and delete transactions (date, expense/income, amount, category, memo)
+- View each month as a ledger, with a running balance carried over from the previous month
+- View a monthly trend for the year (income, expenses, difference, month-end balance) and a category breakdown for each month
+- Add, rename, reorder, and delete categories
 
-### 明細を記録する
+## Usage
 
-1. サイドバーで **明細** を選ぶ
-2. 上部の入力欄に、日付・支出/収入・金額・カテゴリ・メモを入れる
-   - 日付は、表示中の月が今月なら今日、それ以外の月ならその月の 1 日が入っています
-   - カテゴリは、支出/収入の選択に合わせた選択肢から選びます
-   - メモは空でもかまいません
-3. **追加** を押す(金額・メモの欄で Enter キーを押しても追加できます)
+Use the sidebar on the left to switch between **明細** (Transactions), **集計** (Reports), and **設定** (Settings).
 
-追加すると、日付と支出/収入はそのままで、ほかの欄が空に戻ります。続けて次の明細を入力できます。
-表示中とは別の月の日付で追加すると、その月の表示に切り替わります。
+### Record a transaction
 
-### 明細を直す・消す
+1. Select **明細** (Transactions) in the sidebar.
+2. In the entry form at the top, enter the date, **支出** (expense) or **収入** (income), the amount, the category, and a memo.
+   - The date defaults to today if you are viewing the current month, or to the 1st of the month otherwise.
+   - The category list shows only the categories for the selected type (expense or income).
+   - The memo is optional.
+3. Click **追加** (Add). You can also press Enter in the amount or memo field.
 
-1. 一覧で直したい明細をクリックする
-2. 入力欄に明細の内容が入り、枠が色つきになる(編集中)
-3. 内容を直して **更新** を押す。消すときは **削除** を押す
-4. 編集をやめるときは **キャンセル** を押す
+After you add a transaction, the date and type stay the same and the other fields are cleared, so you can enter the next one right away.
+If you add a transaction dated in a different month, the view switches to that month.
 
-![明細の編集](docs/images/editing.png)
+### Edit or delete a transaction
 
-削除した明細は元に戻せません。
+1. Click a transaction in the list.
+2. Its details are loaded into the entry form, and the form is highlighted to show that you are editing.
+3. Change the details and click **更新** (Update), or click **削除** (Delete) to delete it.
+4. Click **キャンセル** (Cancel) to stop editing.
 
-### 月の収支を見る
+![Editing a transaction](docs/images/editing.png)
 
-明細画面では、`‹` `›` で表示する月を切り替えます。
+Deleted transactions cannot be restored.
 
-- 右上に、その月の **収入**・**支出**・**差額**(収入 − 支出)が出ます。赤字の月は差額が赤く表示されます
-- 一覧は日付の古い順に並び、**残高** は「前月繰越」から積み上げた額です
+### Check the monthly balance
 
-「残高」はアプリに記録した明細から計算した額です。財布や口座の実際の残高とは一致しないことがあります。
+On the Transactions screen, use `‹` and `›` to switch months.
 
-### 1 年の推移と内訳を見る
+- The top right shows the month's **収入** (income), **支出** (expenses), and **差額** (difference = income − expenses). The difference is shown in red when the month is in deficit.
+- The list is sorted from oldest to newest. The **残高** (balance) column accumulates from **前月繰越** (carried over from the previous month).
 
-1. サイドバーで **集計** を選ぶ
-2. `‹` `›` で表示する年を切り替える
-3. 表の月をクリックすると、下にその月の **カテゴリ別の内訳** が出る。支出と収入を切り替えられる
+The balance is calculated from the transactions recorded in the app. It may differ from the actual balance of your wallet or bank account.
 
-まだ来ていない月は「-」で表示されます。
+### View the yearly trend and category breakdown
 
-![集計画面](docs/images/report.png)
+1. Select **集計** (Reports) in the sidebar.
+2. Use `‹` and `›` to switch years.
+3. Click a month in the table to show its **category breakdown** below. You can switch between expenses and income.
 
-### カテゴリを整える
+Months that have not come yet are shown as "-".
 
-サイドバーで **設定** を選びます。支出用と収入用のカテゴリが並んでいます。
+![Reports screen](docs/images/report.png)
 
-| 操作 | やり方 |
+### Manage categories
+
+Select **設定** (Settings) in the sidebar. Expense categories and income categories are listed side by side.
+
+| Action | How |
 |---|---|
-| 追加 | 一覧の下の欄に名前を入れて **追加** |
-| 名前の変更 | **名前変更** を押して新しい名前を入れる。過去の明細の表示も変わります |
-| 並べ替え | **↑** **↓** で動かす。入力欄の選択肢もこの順になります |
-| 削除 | **削除** を押す。入力欄の選択肢から消えますが、登録済みの明細にはカテゴリ名が残ります |
+| Add | Enter a name in the field below the list and click **追加** (Add) |
+| Rename | Click **名前変更** (Rename) and enter a new name. Past transactions show the new name too |
+| Reorder | Use **↑** and **↓**. The category list in the entry form follows this order |
+| Delete | Click **削除** (Delete). The category is removed from the entry form, but existing transactions keep its name |
 
-初回起動時に、よく使うカテゴリ(食費、日用品、給与など)が登録されています。
+Common categories (food, household goods, salary, and so on) are created on first launch.
 
-![設定画面](docs/images/settings.png)
+![Settings screen](docs/images/settings.png)
 
-### データの保存場所
+### Where data is stored
 
-データは端末の中(SQLite)に保存されます。まだクラウドには送られません。
+Data is stored on your device in SQLite. It is not sent to the cloud yet.
 
-| OS | 場所 |
+| OS | Location |
 |---|---|
 | macOS | `~/Library/Containers/dev.redamoon.kakeibo.desktop/Data/Library/kakeibo.db3` |
 
-## 開発環境
+## Development
 
-### 必要なもの(macOS)
+### Requirements (macOS)
 
-| ツール | バージョン | 備考 |
+| Tool | Version | Notes |
 |---|---|---|
-| macOS | Apple Silicon | Xcode 27 が動くバージョン |
-| Xcode | **27.0** | MAUI ワークロードと major.minor が一致している必要があります |
-| .NET SDK | **10.0.401** 以降の 10.0.4xx | [ダウンロード](https://dotnet.microsoft.com/download/dotnet/10.0) |
-| .NET MAUI ワークロード | **10.0.401.1** | `global.json` の `workloadVersion` で固定しています |
+| macOS | Apple Silicon | A version that can run Xcode 27 |
+| Xcode | **27.0** | Its major.minor version must match the MAUI workload |
+| .NET SDK | **10.0.401** or a later 10.0.4xx | [Download](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| .NET MAUI workload | **10.0.401.1** | Pinned by `workloadVersion` in `global.json` |
 
-SDK とワークロードのバージョンは [global.json](global.json) で固定しています。
+The SDK and workload versions are pinned in [global.json](global.json).
 
-### セットアップ
+### Setup
 
 ```sh
 git clone https://github.com/redamoon/kakeibo.git
 cd kakeibo
 
-# Xcode を指定し、ライセンスに同意する
+# Select Xcode and accept its license
 sudo xcode-select -s /Applications/Xcode.app
 sudo xcodebuild -license accept
 sudo xcodebuild -runFirstLaunch
 
-# MAUI ワークロードを入れ、global.json と同じバージョンにそろえる
+# Install the MAUI workload and match the version in global.json
 sudo dotnet workload install maui
 sudo dotnet workload update --version 10.0.401.1
 
-# 確認(「global.json ... 10.0.401.1 を使用しています」と出れば OK)
+# Verify: the output should say that workload version 10.0.401.1 from global.json is used
 dotnet workload list
 ```
 
-### ビルドと実行
+### Build and run
 
 ```sh
-# Mac Catalyst 版をビルドして起動
+# Build and launch the Mac Catalyst app
 dotnet build src/Kakeibo.Desktop -f net10.0-maccatalyst
 open "src/Kakeibo.Desktop/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/家計簿.app"
 
-# テスト(Core のみ。MAUI なしで動きます)
+# Run the tests (Core only; MAUI is not required)
 dotnet test tests/Kakeibo.Core.Tests
 ```
 
-Windows 版(`net10.0-windows10.0.19041.0`)は Windows 上でのみビルドできます。Windows でのビルドはまだ確認していません。
+The Windows app (`net10.0-windows10.0.19041.0`) can only be built on Windows. The Windows build has not been verified yet.
 
-### よくあるエラー
+### Troubleshooting
 
 **`This version of .NET for MacCatalyst (x) requires Xcode y`**
 
-Xcode とワークロードのバージョンが合っていません。MAUI の Mac Catalyst SDK は、Xcode の major.minor が完全に一致しないとビルドできません。
+Your Xcode version does not match the workload. The MAUI Mac Catalyst SDK builds only when the major.minor version of Xcode matches exactly.
 
-- `xcodebuild -version` で Xcode のバージョンを確認する
-- Xcode を更新したら、それに合うワークロードのバージョンを `dotnet workload search version` で探し、`global.json` の `workloadVersion` と `sudo dotnet workload update --version <バージョン>` をそろえる
+- Check your Xcode version with `xcodebuild -version`.
+- After updating Xcode, find a matching workload version with `dotnet workload search version`. Then update both `workloadVersion` in `global.json` and the installed workload with `sudo dotnet workload update --version <version>`.
 
 **`You have not agreed to the Xcode license agreements`**
 
-Xcode を入れた直後や更新した直後に出ます。`sudo xcodebuild -license accept` を実行してください。
+This appears right after installing or updating Xcode. Run `sudo xcodebuild -license accept`.
 
-### プロジェクト構成
+### Project structure
 
 ```
-src/Kakeibo.Core/          ドメインとデータアクセス(MAUI に依存しない)
-src/Kakeibo.Desktop/       .NET MAUI のデスクトップアプリ
-tests/Kakeibo.Core.Tests/  Core の単体テスト
-docs/                      設計ドキュメント
+src/Kakeibo.Core/          Domain and data access (no dependency on MAUI)
+src/Kakeibo.Desktop/       .NET MAUI desktop app
+tests/Kakeibo.Core.Tests/  Unit tests for Core
+docs/                      Design documents (Japanese)
 ```
 
-詳しくは [アーキテクチャ](docs/architecture.md) を見てください。
+See [Architecture](docs/architecture.md) (Japanese) for details.
