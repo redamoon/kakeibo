@@ -2,20 +2,30 @@ using Kakeibo.Core.Transactions;
 
 namespace Kakeibo.Desktop.ViewModels;
 
-/// <summary>一覧の1行分の表示内容。</summary>
-public sealed class TransactionItemViewModel(Transaction transaction)
+/// <summary>帳簿の1行分の表示内容。</summary>
+public sealed class TransactionItemViewModel(LedgerRow row)
 {
-    public Guid Id => transaction.Id;
+    public Transaction Transaction => row.Transaction;
 
-    public string DateText => transaction.Date.ToString("M/d (ddd)");
+    public Guid Id => row.Transaction.Id;
 
-    public string Category => transaction.Category;
+    public string DateText => row.Transaction.Date.ToString("M/d (ddd)");
 
-    public string Memo => transaction.Memo;
+    public string Category => row.Transaction.Category;
 
-    public bool HasMemo => !string.IsNullOrEmpty(transaction.Memo);
+    public string Memo => row.Transaction.Memo;
 
-    public bool IsIncome => transaction.Kind == TransactionKind.Income;
+    public bool HasMemo => !string.IsNullOrEmpty(row.Transaction.Memo);
 
-    public string AmountText => $"{(IsIncome ? "+" : "-")}{transaction.Amount:N0}円";
+    public bool IsIncome => row.Transaction.Kind == TransactionKind.Income;
+
+    /// <summary>収入の列に出す金額。支出の行では空。</summary>
+    public string IncomeText => IsIncome ? Money.Format(row.Transaction.Amount) : "";
+
+    /// <summary>支出の列に出す金額。収入の行では空。</summary>
+    public string ExpenseText => IsIncome ? "" : Money.Format(row.Transaction.Amount);
+
+    public string BalanceText => Money.Format(row.Balance);
+
+    public bool IsBalanceNegative => row.Balance < 0;
 }

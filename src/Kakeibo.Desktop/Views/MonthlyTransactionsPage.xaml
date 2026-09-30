@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Kakeibo.Desktop.Views.MonthlyTransactionsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Kakeibo.Desktop.ViewModels"
+    x:DataType="vm:MonthlyTransactionsViewModel"
+    Title="明細">
+
+    <ContentPage.Resources>
+        <Color x:Key="IncomeColor">#1E8E3E</Color>
+        <Color x:Key="NegativeColor">#D93025</Color>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="24,16" RowSpacing="16">
+
+        <!-- 月の切り替えと、その月の収支 -->
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="‹" Command="{Binding PreviousMonthCommand}" SemanticProperties.Description="前の月" />
+                <Label Text="{Binding MonthText}" FontSize="22" FontAttributes="Bold" VerticalOptions="Center"
+                       WidthRequest="160" HorizontalTextAlignment="Center" />
+                <Button Text="›" Command="{Binding NextMonthCommand}" SemanticProperties.Description="次の月" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Grid.Column="2" Spacing="24" VerticalOptions="Center">
+                <VerticalStackLayout>
+                    <Label Text="収入" FontSize="12" HorizontalTextAlignment="End" />
+                    <Label Text="{Binding IncomeTotalText}" FontSize="18" FontAttributes="Bold"
+                           TextColor="{StaticResource IncomeColor}" HorizontalTextAlignment="End" />
+                </VerticalStackLayout>
+                <VerticalStackLayout>
+                    <Label Text="支出" FontSize="12" HorizontalTextAlignment="End" />
+                    <Label Text="{Binding ExpenseTotalText}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                </VerticalStackLayout>
+                <VerticalStackLayout>
+                    <Label Text="差額" FontSize="12" HorizontalTextAlignment="End" />
+                    <Label Text="{Binding DifferenceText}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="End">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsDifferenceNegative}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource NegativeColor}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- 入力欄。一覧で明細を選ぶと編集モードになる -->
+        <Border Grid.Row="1" Padding="16,12" StrokeThickness="1" StrokeShape="RoundRectangle 8"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+            <Border.Triggers>
+                <DataTrigger TargetType="Border" Binding="{Binding IsEditing}" Value="True">
+                    <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                    <Setter Property="StrokeThickness" Value="2" />
+                </DataTrigger>
+            </Border.Triggers>
+
+            <VerticalStackLayout Spacing="8">
+                <Label Text="選択した明細を編集中" IsVisible="{Binding IsEditing}" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+
+                <Grid ColumnDefinitions="Auto,Auto,120,160,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                    <Label Text="日付" />
+                    <Label Grid.Column="1" Text="種類" />
+                    <Label Grid.Column="2" Text="金額(円)" />
+                    <Label Grid.Column="3" Text="カテゴリ" />
+                    <Label Grid.Column="4" Text="メモ" />
+
+                    <DatePicker Grid.Row="1" Date="{Binding Date}" Format="yyyy/MM/dd" VerticalOptions="Center" />
+                    <HorizontalStackLayout Grid.Row="1" Grid.Column="1" RadioButtonGroup.GroupName="Kind">
+                        <RadioButton Content="支出" IsChecked="{Binding IsExpense}" />
+                        <RadioButton Content="収入" IsChecked="{Binding IsIncome}" />
+                    </HorizontalStackLayout>
+                    <Entry x:Name="AmountEntry" Grid.Row="1" Grid.Column="2" Text="{Binding AmountText}"
+                           Keyboard="Numeric" Placeholder="1000" ReturnCommand="{Binding SaveCommand}" />
+                    <Entry Grid.Row="1" Grid.Column="3" Text="{Binding Category}" Placeholder="食費"
+                           ReturnCommand="{Binding SaveCommand}" />
+                    <Entry Grid.Row="1" Grid.Column="4" Text="{Binding Memo}" ReturnCommand="{Binding SaveCommand}" />
+
+                    <HorizontalStackLayout Grid.Row="1" Grid.Column="5" Spacing="8">
+                        <Button Text="追加" Command="{Binding SaveCommand}">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsEditing}" Value="True">
+                                    <Setter Property="Text" Value="更新" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Text="キャンセル" Command="{Binding CancelEditCommand}" IsVisible="{Binding IsEditing}"
+                                BackgroundColor="Transparent"
+                                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        <Button Text="削除" Command="{Binding DeleteCommand}" IsVisible="{Binding IsEditing}"
+                                BackgroundColor="#D93025" TextColor="White" />
+                    </HorizontalStackLayout>
+                </Grid>
+
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="#D93025" />
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- 帳簿。古い順に並べ、残高を積み上げる。クリックした明細を入力欄で編集する
+             列幅(100,*,120,120,130)は見出しと各行で揃える -->
+        <Grid Grid.Row="2" RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="100,*,120,120,130" Padding="8,6" ColumnSpacing="12"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+                <Label Text="日付" FontAttributes="Bold" />
+                <Label Grid.Column="1" Text="内容" FontAttributes="Bold" />
+                <Label Grid.Column="2" Text="収入" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                <Label Grid.Column="3" Text="支出" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                <Label Grid.Column="4" Text="残高" FontAttributes="Bold" HorizontalTextAlignment="End" />
+            </Grid>
+
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Items}"
+                            SelectionMode="Single" SelectedItem="{Binding SelectedItem}">
+                <CollectionView.EmptyView>
+                    <Label Text="この月の明細はまだありません。" HorizontalOptions="Center" Margin="0,48"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TransactionItemViewModel">
+                        <Grid ColumnDefinitions="100,*,120,120,130" Padding="8,10" ColumnSpacing="12">
+                            <Label Text="{Binding DateText}" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="{Binding Category}" />
+                                <Label Text="{Binding Memo}" IsVisible="{Binding HasMemo}" FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="{Binding IncomeText}" VerticalOptions="Center"
+                                   HorizontalTextAlignment="End" TextColor="{StaticResource IncomeColor}" />
+                            <Label Grid.Column="3" Text="{Binding ExpenseText}" VerticalOptions="Center"
+                                   HorizontalTextAlignment="End" />
+                            <Label Grid.Column="4" Text="{Binding BalanceText}" VerticalOptions="Center"
+                                   HorizontalTextAlignment="End" FontAttributes="Bold">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsBalanceNegative}" Value="True">
+                                        <Setter Property="TextColor" Value="{StaticResource NegativeColor}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+    </Grid>
+</ContentPage>

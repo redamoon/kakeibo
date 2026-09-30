@@ -25,10 +25,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton(_ => new KakeiboDatabase(Path.Combine(FileSystem.AppDataDirectory, "kakeibo.db3")));
 		builder.Services.AddSingleton<ITransactionRepository, SqliteTransactionRepository>();
 
-		builder.Services.AddTransient<TransactionListViewModel>();
-		builder.Services.AddTransient<TransactionListPage>();
-		builder.Services.AddTransient<TransactionEditViewModel>();
-		builder.Services.AddTransient<TransactionEditPage>();
+		builder.Services.AddTransient<MonthlyTransactionsViewModel>();
+		builder.Services.AddTransient<MonthlyTransactionsPage>();
 
 #if DEBUG
 		builder.Logging.AddDebug();

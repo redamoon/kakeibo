@@ -8,7 +8,7 @@
 
     <ShellContent
         Title="明細"
-        ContentTemplate="{DataTemplate views:TransactionListPage}"
+        ContentTemplate="{DataTemplate views:MonthlyTransactionsPage}"
         Route="transactions" />
 
 </Shell>
