@@ -40,6 +40,13 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
 
     public string MonthText => _month.ToString("yyyy年M月");
 
+    /// <summary>前月までの累計(前月繰越)。</summary>
+    [ObservableProperty]
+    public partial string OpeningBalanceText { get; set; } = "0";
+
+    [ObservableProperty]
+    public partial bool IsOpeningBalanceNegative { get; set; }
+
     [ObservableProperty]
     public partial string IncomeTotalText { get; set; } = "0";
 
@@ -99,7 +106,8 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
         RefreshCategoryOptions(SelectedItem?.Transaction.CategoryId);
 
         var transactions = await _repository.GetByMonthAsync(_month.Year, _month.Month);
-        var ledger = MonthlyLedger.Build(transactions);
+        var openingBalance = await _repository.GetBalanceBeforeAsync(_month);
+        var ledger = MonthlyLedger.Build(transactions, openingBalance);
 
         Items.Clear();
         foreach (var row in ledger.Rows)
@@ -107,6 +115,8 @@ public sealed partial class MonthlyTransactionsViewModel : ObservableObject
             Items.Add(new TransactionItemViewModel(row, CategoryNameOf(row.Transaction.CategoryId)));
         }
 
+        OpeningBalanceText = Money.Format(ledger.OpeningBalance);
+        IsOpeningBalanceNegative = ledger.OpeningBalance < 0;
         IncomeTotalText = Money.Format(ledger.IncomeTotal);
         ExpenseTotalText = Money.Format(ledger.ExpenseTotal);
         DifferenceText = Money.FormatSigned(ledger.Difference);

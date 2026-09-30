@@ -83,6 +83,22 @@ public sealed class SqliteTransactionRepositoryTests : TestDatabase
     }
 
     [Fact]
+    public async Task Balance_before_sums_earlier_rows_excluding_deleted()
+    {
+        await _repository.AddAsync(Draft(new DateOnly(2026, 8, 1), amount: 300_000, category: _salary));
+        await _repository.AddAsync(Draft(new DateOnly(2026, 8, 31), amount: 1_000));
+        var deleted = await _repository.AddAsync(Draft(new DateOnly(2026, 8, 15), amount: 50_000));
+        await _repository.DeleteAsync(deleted.Id);
+        await _repository.AddAsync(Draft(new DateOnly(2026, 9, 1), amount: 2_000));
+
+        Assert.Equal(299_000, await _repository.GetBalanceBeforeAsync(new DateOnly(2026, 9, 1)));
+        Assert.Equal(0, await _repository.GetBalanceBeforeAsync(new DateOnly(2026, 8, 1)));
+
+        var otherUser = new SqliteTransactionRepository(Database, new FixedUser("someone-else"), Clock);
+        Assert.Equal(0, await otherUser.GetBalanceBeforeAsync(new DateOnly(2026, 10, 1)));
+    }
+
+    [Fact]
     public async Task Other_users_rows_are_not_visible()
     {
         var added = await _repository.AddAsync(Draft(new DateOnly(2026, 9, 1)));

@@ -8,23 +8,29 @@ public sealed class SqliteTransactionRepository(
     ICurrentUser currentUser,
     TimeProvider timeProvider) : ITransactionRepository
 {
-    public async Task<IReadOnlyList<Transaction>> GetByMonthAsync(int year, int month)
+    public async Task<IReadOnlyList<Transaction>> GetByPeriodAsync(DateOnly from, DateOnly to)
     {
-        var from = TransactionRow.FormatDate(new DateOnly(year, month, 1));
-        var to = TransactionRow.FormatDate(new DateOnly(year, month, 1).AddMonths(1));
-        var userId = currentUser.UserId;
-
         var connection = await database.GetConnectionAsync();
         // sqlite-net の LINQ は文字列の大小比較を変換できないため、SQL で書く
         var rows = await connection.QueryAsync<TransactionRow>(
             """
             SELECT * FROM transactions
             WHERE user_id = ? AND deleted = 0 AND date >= ? AND date < ?
-            ORDER BY date DESC, updated_at DESC
             """,
-            userId, from, to);
+            currentUser.UserId, TransactionRow.FormatDate(from), TransactionRow.FormatDate(to));
 
         return rows.Select(r => r.ToModel()).ToList();
+    }
+
+    public async Task<long> GetBalanceBeforeAsync(DateOnly date)
+    {
+        var connection = await database.GetConnectionAsync();
+        return await connection.ExecuteScalarAsync<long>(
+            """
+            SELECT COALESCE(SUM(CASE WHEN kind = ? THEN amount ELSE -amount END), 0) FROM transactions
+            WHERE user_id = ? AND deleted = 0 AND date < ?
+            """,
+            (int)TransactionKind.Income, currentUser.UserId, TransactionRow.FormatDate(date));
     }
 
     public async Task<Transaction?> FindAsync(Guid id)

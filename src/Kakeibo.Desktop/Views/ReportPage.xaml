@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Kakeibo.Desktop.Views.ReportPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Kakeibo.Desktop.ViewModels"
+    x:DataType="vm:ReportViewModel"
+    Title="集計">
+
+    <ContentPage.Resources>
+        <Color x:Key="IncomeColor">#1E8E3E</Color>
+        <Color x:Key="NegativeColor">#D93025</Color>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24,16" Spacing="16">
+
+            <!-- 年の切り替え -->
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="‹" Command="{Binding PreviousYearCommand}" SemanticProperties.Description="前の年" />
+                <Label Text="{Binding YearText}" FontSize="22" FontAttributes="Bold" VerticalOptions="Center"
+                       WidthRequest="120" HorizontalTextAlignment="Center" />
+                <Button Text="›" Command="{Binding NextYearCommand}" SemanticProperties.Description="次の年" />
+            </HorizontalStackLayout>
+
+            <!-- 月ごとの推移。行をクリックすると下の内訳の月が変わる。
+                 列幅(80,*,*,*,*)は見出し・各行・合計で揃える -->
+            <VerticalStackLayout>
+                <Grid ColumnDefinitions="80,*,*,*,*" Padding="8,6" ColumnSpacing="12"
+                      BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+                    <Label Text="月" FontAttributes="Bold" />
+                    <Label Grid.Column="1" Text="収入" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                    <Label Grid.Column="2" Text="支出" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                    <Label Grid.Column="3" Text="差額" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                    <Label Grid.Column="4" Text="月末残高" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                </Grid>
+
+                <Grid ColumnDefinitions="80,*,*,*,*" Padding="8,6" ColumnSpacing="12">
+                    <Label Text="前年繰越" TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                    <Label Grid.Column="4" Text="{Binding OpeningBalanceText}" HorizontalTextAlignment="End" />
+                </Grid>
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Months}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MonthSummaryItemViewModel">
+                            <Grid ColumnDefinitions="80,*,*,*,*" Padding="8,6" ColumnSpacing="12">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding SelectMonthCommand, Source={RelativeSource AncestorType={x:Type vm:ReportViewModel}}, x:DataType=vm:ReportViewModel}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <Grid.Triggers>
+                                    <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Gray600}}" />
+                                    </DataTrigger>
+                                </Grid.Triggers>
+                                <Label Text="{Binding MonthText}" />
+                                <Label Grid.Column="1" Text="{Binding IncomeText}" HorizontalTextAlignment="End"
+                                       TextColor="{StaticResource IncomeColor}" />
+                                <Label Grid.Column="2" Text="{Binding ExpenseText}" HorizontalTextAlignment="End" />
+                                <Label Grid.Column="3" Text="{Binding DifferenceText}" HorizontalTextAlignment="End">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsDifferenceNegative}" Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource NegativeColor}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Grid.Column="4" Text="{Binding BalanceText}" HorizontalTextAlignment="End" FontAttributes="Bold">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsBalanceNegative}" Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource NegativeColor}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="80,*,*,*,*" Padding="8,6" ColumnSpacing="12"
+                      BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+                    <Label Text="年間合計" FontAttributes="Bold" />
+                    <Label Grid.Column="1" Text="{Binding IncomeTotalText}" FontAttributes="Bold"
+                           HorizontalTextAlignment="End" TextColor="{StaticResource IncomeColor}" />
+                    <Label Grid.Column="2" Text="{Binding ExpenseTotalText}" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                    <Label Grid.Column="3" Text="{Binding DifferenceText}" FontAttributes="Bold" HorizontalTextAlignment="End">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsDifferenceNegative}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource NegativeColor}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- 選んだ月のカテゴリ別内訳 -->
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="{Binding BreakdownTitle}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+                    <HorizontalStackLayout Grid.Column="1" RadioButtonGroup.GroupName="BreakdownKind">
+                        <RadioButton Content="支出" IsChecked="{Binding IsExpenseBreakdown}" />
+                        <RadioButton Content="収入" IsChecked="{Binding IsIncomeBreakdown}" />
+                    </HorizontalStackLayout>
+                </Grid>
+
+                <Label Text="この月の明細はありません。" IsVisible="{Binding IsBreakdownEmpty}"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Breakdown}" Spacing="6">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CategoryTotalItemViewModel">
+                            <Grid ColumnDefinitions="140,*,110,56" ColumnSpacing="12">
+                                <Label Text="{Binding Name}" VerticalOptions="Center" />
+                                <ProgressBar Grid.Column="1" Progress="{Binding Ratio}" VerticalOptions="Center"
+                                             ProgressColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                <Label Grid.Column="2" Text="{Binding AmountText}" HorizontalTextAlignment="End" VerticalOptions="Center" />
+                                <Label Grid.Column="3" Text="{Binding PercentText}" HorizontalTextAlignment="End" VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

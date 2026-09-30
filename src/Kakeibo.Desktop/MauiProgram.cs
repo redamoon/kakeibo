@@ -29,6 +29,8 @@ public static class MauiProgram
 
 		builder.Services.AddTransient<MonthlyTransactionsViewModel>();
 		builder.Services.AddTransient<MonthlyTransactionsPage>();
+		builder.Services.AddTransient<ReportViewModel>();
+		builder.Services.AddTransient<ReportPage>();
 		builder.Services.AddTransient<CategorySettingsViewModel>();
 		builder.Services.AddTransient<SettingsPage>();
 

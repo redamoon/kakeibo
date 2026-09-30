@@ -13,6 +13,10 @@
         <ShellContent ContentTemplate="{DataTemplate views:MonthlyTransactionsPage}" Route="transactions" />
     </FlyoutItem>
 
+    <FlyoutItem Title="集計">
+        <ShellContent ContentTemplate="{DataTemplate views:ReportPage}" Route="report" />
+    </FlyoutItem>
+
     <FlyoutItem Title="設定">
         <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="settings" />
     </FlyoutItem>

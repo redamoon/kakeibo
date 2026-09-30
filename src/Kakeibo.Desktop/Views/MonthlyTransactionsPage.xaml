@@ -103,7 +103,7 @@
 
         <!-- 帳簿。古い順に並べ、残高を積み上げる。クリックした明細を入力欄で編集する
              列幅(100,*,120,120,130)は見出しと各行で揃える -->
-        <Grid Grid.Row="2" RowDefinitions="Auto,*">
+        <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*">
             <Grid ColumnDefinitions="100,*,120,120,130" Padding="8,6" ColumnSpacing="12"
                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
                 <Label Text="日付" FontAttributes="Bold" />
@@ -113,7 +113,21 @@
                 <Label Grid.Column="4" Text="残高" FontAttributes="Bold" HorizontalTextAlignment="End" />
             </Grid>
 
-            <CollectionView Grid.Row="1" ItemsSource="{Binding Items}"
+            <!-- 前月までの累計。表の残高はここから積み上げる -->
+            <Grid Grid.Row="1" ColumnDefinitions="100,*,120,120,130" Padding="8,8" ColumnSpacing="12">
+                <Label Grid.Column="1" Text="前月繰越" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}" />
+                <Label Grid.Column="4" Text="{Binding OpeningBalanceText}" VerticalOptions="Center"
+                       HorizontalTextAlignment="End" FontAttributes="Bold">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding IsOpeningBalanceNegative}" Value="True">
+                            <Setter Property="TextColor" Value="{StaticResource NegativeColor}" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+            </Grid>
+
+            <CollectionView Grid.Row="2" ItemsSource="{Binding Items}"
                             SelectionMode="Single" SelectedItem="{Binding SelectedItem}">
                 <CollectionView.EmptyView>
                     <Label Text="この月の明細はまだありません。" HorizontalOptions="Center" Margin="0,48"

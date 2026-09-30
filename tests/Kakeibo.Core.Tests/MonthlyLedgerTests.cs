@@ -47,6 +47,16 @@ public sealed class MonthlyLedgerTests
     }
 
     [Fact]
+    public void Balance_starts_from_opening_balance()
+    {
+        var ledger = MonthlyLedger.Build([Tx(1, TransactionKind.Expense, 1_000), Tx(2, TransactionKind.Income, 300)], openingBalance: 5_000);
+
+        Assert.Equal([4_000L, 4_300L], ledger.Rows.Select(r => r.Balance));
+        Assert.Equal(-700, ledger.Difference);
+        Assert.Equal(4_300, ledger.ClosingBalance);
+    }
+
+    [Fact]
     public void Empty_month_has_zero_totals()
     {
         var ledger = MonthlyLedger.Build([]);
