@@ -6,8 +6,8 @@
 
 現在はデスクトップ版(macOS / Windows)をオフラインで動かすところまでできています。ログインとクラウド同期、Web 版はこれから作ります。
 
-- [アーキテクチャ](docs/architecture.md): 全体構成、データ設計、決定事項と未決事項
-- [ユビキタス言語](docs/ubiquitous-language.md): 用語集
+- [アーキテクチャ](docs/architecture.ja.md): 全体構成、データ設計、決定事項と未決事項
+- [ユビキタス言語](docs/ubiquitous-language.ja.md): 用語集
 
 ![明細画面](docs/images/transactions.png)
 
@@ -154,4 +154,4 @@ tests/Kakeibo.Core.Tests/  Core の単体テスト
 docs/                      設計ドキュメント
 ```
 
-詳しくは [アーキテクチャ](docs/architecture.md) を見てください。
+詳しくは [アーキテクチャ](docs/architecture.ja.md) を見てください。

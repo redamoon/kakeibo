@@ -1,55 +1,56 @@
-# ユビキタス言語
+# Ubiquitous language
 
-画面・ドキュメント・会話・コードで同じ言葉を使うための用語集。
-画面とドキュメントでは「用語」の列を使い、コードでは「コード上の名前」を使う。
+English | [日本語](ubiquitous-language.ja.md)
 
-## 表記のルール
+A glossary for using the same words in the UI, documents, conversations, and code.
+The UI is in Japanese, so each term lists its Japanese UI label alongside its name in code.
 
-- 家計簿の1件の記録は **「明細」** と呼ぶ。「取引」「仕訳」「レコード」は使わない
-  - コード上は `Transaction` だが、画面・文章では「明細」
-- お金の出入りは **「支出」「収入」** と呼ぶ。「出金」「入金」「借方」「貸方」は使わない
-- 金額は円単位の整数。画面では 3 桁区切りで表示し、単位「円」は列見出しなどで示す
+## Wording rules
 
-## 用語
+- A single record in the budget book is called a **transaction** (UI: **明細**). In Japanese, do not use 「取引」「仕訳」 or 「レコード」
+- Money going out and coming in is called **expense** (**支出**) and **income** (**収入**). In Japanese, do not use 「出金」「入金」「借方」 or 「貸方」
+- Amounts are integers in yen. The UI shows them with thousands separators, and the unit (円) is shown in column headers
 
-### 明細とカテゴリ
+## Terms
 
-| 用語 | コード上の名前 | 意味 |
-|---|---|---|
-| 明細 | `Transaction` | 家計簿の1件の記録。日付・種類・金額・カテゴリ・メモを持つ |
-| 種類 | `TransactionKind` | 明細やカテゴリが **支出**(`Expense`)か **収入**(`Income`)か |
-| 金額 | `Amount` | 明細の金額。1 円以上の整数。支出でもプラスの値で持つ |
-| メモ | `Memo` | 明細の補足。任意 |
-| カテゴリ | `Category` | 明細の分類(食費、給与など)。支出用と収入用に分かれる |
-| 標準カテゴリ | `DefaultCategories` | 初回起動時に自動で登録されるカテゴリ |
-| 並び順 | `SortOrder` | 入力欄の選択肢や設定画面でのカテゴリの順番。種類ごとに 0 から |
-| 入力欄 | (画面) | 明細画面の上部にある、明細を追加・編集するフォーム |
+### Transactions and categories
 
-### 集計
+| Term | Japanese (UI) | Name in code | Meaning |
+|---|---|---|---|
+| Transaction | 明細 | `Transaction` | A single record in the budget book. Has a date, kind, amount, category, and memo |
+| Kind | 種類 | `TransactionKind` | Whether a transaction or category is an **expense** (`Expense`, 支出) or **income** (`Income`, 収入) |
+| Amount | 金額 | `Amount` | The amount of a transaction. An integer of at least 1 yen. Stored as a positive value even for expenses |
+| Memo | メモ | `Memo` | Optional note on a transaction |
+| Category | カテゴリ | `Category` | Classification of a transaction (food, salary, etc.). Separate for expenses and income |
+| Default categories | 標準カテゴリ | `DefaultCategories` | Categories created automatically on first launch |
+| Sort order | 並び順 | `SortOrder` | Order of categories in the entry form and settings screen. Starts at 0 for each kind |
+| Entry form | 入力欄 | (UI) | The form at the top of the Transactions screen for adding and editing transactions |
 
-| 用語 | コード上の名前 | 意味 |
-|---|---|---|
-| 帳簿 | `MonthlyLedger` | 1 か月の明細を古い順に並べ、残高をつけたもの。明細画面の表 |
-| 残高 | `LedgerRow.Balance` | 帳簿のその行までの累計。前月繰越 + その月の収入 − 支出 |
-| 前月繰越 | `MonthlyLedger.OpeningBalance` | その月より前の全明細の収支の累計。帳簿の残高の起点 |
-| 月末残高 | `MonthlyLedger.ClosingBalance` / `MonthSummary.ClosingBalance` | その月の最後の残高 |
-| 前年繰越 | `YearlySummary.OpeningBalance` | その年より前の全明細の収支の累計 |
-| 差額 | `Difference` | 期間の収入 − 支出。プラスなら黒字、マイナスなら赤字 |
-| 年間推移 | `YearlySummary` | 1 年分の、月ごとの収入・支出・差額・月末残高と年間合計 |
-| カテゴリ別内訳 | `CategoryBreakdown` | 選んだ月の、カテゴリごとの合計と割合。支出と収入で別々に出す |
+### Aggregation
 
-「残高」は、アプリに記録した明細から計算した値であり、財布や口座の実際の残高とは一致しないことがある。
+| Term | Japanese (UI) | Name in code | Meaning |
+|---|---|---|---|
+| Ledger | 帳簿 | `MonthlyLedger` | A month's transactions sorted from oldest to newest, with a balance. The table on the Transactions screen |
+| Balance | 残高 | `LedgerRow.Balance` | Running total up to that row of the ledger. Carryover + income − expenses for the month |
+| Carryover from the previous month | 前月繰越 | `MonthlyLedger.OpeningBalance` | Net total of all transactions before the month. The starting point of the ledger balance |
+| Month-end balance | 月末残高 | `MonthlyLedger.ClosingBalance` / `MonthSummary.ClosingBalance` | The last balance of the month |
+| Carryover from the previous year | 前年繰越 | `YearlySummary.OpeningBalance` | Net total of all transactions before the year |
+| Difference | 差額 | `Difference` | Income − expenses for the period. Positive means a surplus, negative means a deficit |
+| Yearly summary | 年間推移 | `YearlySummary` | Income, expenses, difference, and month-end balance for each month of a year, plus yearly totals |
+| Category breakdown | カテゴリ別内訳 | `CategoryBreakdown` | Total and share per category for the selected month. Shown separately for expenses and income |
 
-### データと同期
+The "balance" is calculated from the transactions recorded in the app. It may differ from the actual balance of a wallet or bank account.
 
-| 用語 | コード上の名前 | 意味 |
-|---|---|---|
-| 利用者 | `ICurrentUser` / `UserId` | データの所有者。ログイン実装までは `local` |
-| 論理削除 | `Deleted` | 行を消さずに削除済みの印をつけること。削除を他端末へ伝えるため |
-| 版(バージョン) | `Version` | 行を更新した回数。作成時 1 |
-| 最終更新時刻 | `UpdatedAt` | 行を最後に更新した時刻(UTC)。競合解決に使う |
-| スキーマの版 | `PRAGMA user_version` | ローカル DB の構造の版。マイグレーションで上げる |
-| 同期 | (未実装) | デスクトップのローカル DB とクラウド DB の内容を揃えること |
-| push | (未実装) | 同期のうち、端末の変更をサーバーへ送ること |
-| pull | (未実装) | 同期のうち、前回同期以降のサーバーの変更を取得すること |
-| Last Write Wins | (未実装) | 競合したとき、最終更新時刻が新しい方を採用するルール |
+### Data and sync
+
+| Term | Japanese | Name in code | Meaning |
+|---|---|---|---|
+| User | 利用者 | `ICurrentUser` / `UserId` | Owner of the data. `local` until sign-in is implemented |
+| Soft delete | 論理削除 | `Deleted` | Marking a row as deleted instead of removing it, so that deletions can be sent to other devices |
+| Version | 版(バージョン) | `Version` | Number of times a row has been updated. 1 when created |
+| Last update time | 最終更新時刻 | `UpdatedAt` | When the row was last updated (UTC). Used to resolve conflicts |
+| Schema version | スキーマの版 | `PRAGMA user_version` | Version of the local DB structure. Raised by migrations |
+| Sync | 同期 | (not implemented) | Keeping the desktop's local DB and the cloud DB consistent |
+| push | push | (not implemented) | The part of sync that sends the device's changes to the server |
+| pull | pull | (not implemented) | The part of sync that fetches the server's changes since the last sync |
+| Last Write Wins | Last Write Wins | (not implemented) | Conflict rule: the row with the more recent last update time wins |

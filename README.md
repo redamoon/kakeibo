@@ -8,8 +8,8 @@ The desktop app (macOS / Windows) currently works offline. Sign-in, cloud sync, 
 
 The app UI is in Japanese. This README shows the Japanese label next to its English meaning, for example **明細** (Transactions).
 
-- [Architecture](docs/architecture.md) (Japanese): system overview, data design, decisions and open questions
-- [Ubiquitous language](docs/ubiquitous-language.md) (Japanese): glossary
+- [Architecture](docs/architecture.md): system overview, data design, decisions and open questions
+- [Ubiquitous language](docs/ubiquitous-language.md): glossary
 
 ![Transactions screen](docs/images/transactions.png)
 
@@ -153,7 +153,7 @@ This appears right after installing or updating Xcode. Run `sudo xcodebuild -lic
 src/Kakeibo.Core/          Domain and data access (no dependency on MAUI)
 src/Kakeibo.Desktop/       .NET MAUI desktop app
 tests/Kakeibo.Core.Tests/  Unit tests for Core
-docs/                      Design documents (Japanese)
+docs/                      Design documents
 ```
 
-See [Architecture](docs/architecture.md) (Japanese) for details.
+See [Architecture](docs/architecture.md) for details.

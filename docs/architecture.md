@@ -1,125 +1,127 @@
-# アーキテクチャ
+# Architecture
 
-家計簿アプリの全体構成と設計上の決定事項をまとめる。用語は [ユビキタス言語](ubiquitous-language.md) に従う。
+English | [日本語](architecture.ja.md)
 
-## 前提
+This document describes the overall structure of the kakeibo (household budget book) app and its design decisions. Terms follow the [ubiquitous language](ubiquitous-language.md).
 
-- 個人開発で、当面は無料配布。有料化は後から追加する
-- ログイン(アカウント)方式
-- 開発環境は Mac
+## Assumptions
 
-## 全体構成
+- A personal project, distributed for free for now. Paid features will be added later
+- Users sign in with an account
+- Development happens on a Mac
 
-最終的には次の構成を目指す。**現在実装済みなのはデスクトップ(オフライン動作)のみ**。
+## System overview
+
+The target structure is shown below. **Only the desktop app (working offline) is implemented so far.**
 
 ```mermaid
 flowchart LR
     subgraph Client
-        Web["Web<br/>React<br/>(常時オンライン)"]
-        Desktop["デスクトップ<br/>.NET MAUI<br/>(ローカル SQLite)"]
+        Web["Web<br/>React<br/>(always online)"]
+        Desktop["Desktop<br/>.NET MAUI<br/>(local SQLite)"]
     end
-    Auth["認証サービス<br/>(OAuth2/OIDC + PKCE)"]
+    Auth["Auth service<br/>(OAuth2/OIDC + PKCE)"]
     API["API<br/>ASP.NET Core"]
-    DB[("クラウド DB<br/>(PostgreSQL 系を想定)")]
+    DB[("Cloud DB<br/>(PostgreSQL-compatible, TBD)")]
 
     Web -- "REST" --> API
-    Desktop -- "push / pull 同期" --> API
-    Web -. "ログイン" .-> Auth
-    Desktop -. "ログイン" .-> Auth
-    API -- "JWT 検証" --> Auth
+    Desktop -- "push / pull sync" --> API
+    Web -. "sign in" .-> Auth
+    Desktop -. "sign in" .-> Auth
+    API -- "verify JWT" --> Auth
     API --> DB
 ```
 
-| 層 | 技術 | 役割 | 状態 |
+| Layer | Technology | Role | Status |
 |---|---|---|---|
-| デスクトップ | C# / .NET 10 / .NET MAUI | ローカル SQLite で動作し、API と同期する | 実装中 |
-| API | ASP.NET Core | 認証検証、CRUD、同期、集計 | 未着手 |
-| クラウド DB | 未定(PostgreSQL 系を想定) | データの正 | 未着手 |
-| Web | React | API を直接呼ぶ(常時オンライン前提) | 未着手 |
+| Desktop | C# / .NET 10 / .NET MAUI | Works on a local SQLite database and syncs with the API | In progress |
+| API | ASP.NET Core | Token verification, CRUD, sync, aggregation | Not started |
+| Cloud DB | TBD (PostgreSQL-compatible expected) | Source of truth for data | Not started |
+| Web | React | Calls the API directly (assumes always online) | Not started |
 
-方針:
+Principles:
 
-- API の契約は **OpenAPI** で定義し、C# と React のクライアントコードを自動生成する
-- 集計などの重要な計算は **API 側に寄せ**、二重実装を避ける
-- 同期ロジックは **デスクトップ側だけ** が持つ
+- Define the API contract with **OpenAPI** and generate the C# and React client code from it
+- Keep important calculations such as aggregation **on the API side** to avoid implementing them twice
+- **Only the desktop app** contains the sync logic
 
-## デスクトップアプリ
+## Desktop app
 
-### 対象プラットフォーム
+### Target platforms
 
-| OS | 対応 | 備考 |
+| OS | Support | Notes |
 |---|---|---|
-| macOS | Mac Catalyst | 日常の確認用 |
-| Windows | WinUI | GitHub Actions の Windows ランナーでビルドする予定(未確認) |
-| Linux | 対象外 | MAUI が非対応 |
-| iOS / Android | 未定 | 後で判断する |
+| macOS | Mac Catalyst | Used for day-to-day checks |
+| Windows | WinUI | To be built on GitHub Actions Windows runners (not verified yet) |
+| Linux | Not supported | Not supported by MAUI |
+| iOS / Android | Undecided | To be decided later |
 
-### プロジェクト構成
+### Project structure
 
 ```
 Kakeibo.slnx
 ├── src/
-│   ├── Kakeibo.Core/          ドメインとデータアクセス(MAUI に依存しない)
-│   │   ├── Accounts/          利用者(ICurrentUser)
-│   │   ├── Categories/        カテゴリ
-│   │   ├── Transactions/      明細と集計(帳簿・年間推移・カテゴリ別内訳)
-│   │   └── Data/              SQLite の実装(テーブル行・リポジトリ・マイグレーション)
-│   └── Kakeibo.Desktop/       MAUI アプリ(MVVM)
+│   ├── Kakeibo.Core/          Domain and data access (no dependency on MAUI)
+│   │   ├── Accounts/          Current user (ICurrentUser)
+│   │   ├── Categories/        Categories
+│   │   ├── Transactions/      Transactions and aggregation (ledger, yearly summary, category breakdown)
+│   │   └── Data/              SQLite implementation (table rows, repositories, migrations)
+│   └── Kakeibo.Desktop/       MAUI app (MVVM)
 │       ├── ViewModels/
 │       └── Views/
 └── tests/
-    └── Kakeibo.Core.Tests/    Core の単体テスト(実際の SQLite ファイルを使う)
+    └── Kakeibo.Core.Tests/    Unit tests for Core (using real SQLite files)
 ```
 
-依存の向きは `Desktop → Core` のみ。Core は MAUI を参照しないため、Mac 上で `dotnet test` だけで検証できる。
+Dependencies only go `Desktop → Core`. Core does not reference MAUI, so it can be verified on a Mac with `dotnet test` alone.
 
 ```mermaid
 flowchart TD
     Views["Views<br/>(XAML)"] --> ViewModels["ViewModels<br/>(CommunityToolkit.Mvvm)"]
-    ViewModels --> Domain["Core: Transactions / Categories<br/>(モデル・集計・リポジトリのインターフェース)"]
-    Data["Core: Data<br/>(sqlite-net による実装)"] --> Domain
-    MauiProgram["MauiProgram<br/>(DI の登録)"] --> Data
+    ViewModels --> Domain["Core: Transactions / Categories<br/>(models, aggregation, repository interfaces)"]
+    Data["Core: Data<br/>(implementation with sqlite-net)"] --> Domain
+    MauiProgram["MauiProgram<br/>(DI registration)"] --> Data
     MauiProgram --> ViewModels
 ```
 
-### 主なライブラリ
+### Main libraries
 
-| 用途 | ライブラリ |
+| Purpose | Library |
 |---|---|
-| ローカル DB | sqlite-net-pcl + SQLitePCLRaw.bundle_green(ネイティブの `SQLitePCLRaw.lib.e_sqlite3` は脆弱性対応のため 3.53.3 を明示) |
+| Local DB | sqlite-net-pcl + SQLitePCLRaw.bundle_green (the native `SQLitePCLRaw.lib.e_sqlite3` is pinned to 3.53.3 to fix a known vulnerability) |
 | MVVM | CommunityToolkit.Mvvm |
-| テスト | xUnit、Microsoft.Extensions.TimeProvider.Testing(時刻の固定) |
+| Tests | xUnit, Microsoft.Extensions.TimeProvider.Testing (for a fixed clock) |
 
-### 画面
+### Screens
 
-左のサイドバー(Shell の Flyout を固定表示)で切り替える。
+Screens are switched from the sidebar on the left (a Shell flyout that is always shown).
 
-| 画面 | ViewModel | 内容 |
+| Screen | ViewModel | Contents |
 |---|---|---|
-| 明細 | `MonthlyTransactionsViewModel` | 月の切り替え、入力欄(追加・編集)、帳簿形式の明細一覧、月の収支 |
-| 集計 | `ReportViewModel` | 年の月別推移、選んだ月のカテゴリ別内訳 |
-| 設定 | `CategorySettingsViewModel` | カテゴリの追加・名前変更・並べ替え・削除 |
+| Transactions (明細) | `MonthlyTransactionsViewModel` | Month navigation, entry form (add/edit), ledger-style transaction list, monthly balance |
+| Reports (集計) | `ReportViewModel` | Monthly trend for the year, category breakdown for the selected month |
+| Settings (設定) | `CategorySettingsViewModel` | Add, rename, reorder, and delete categories |
 
-各画面は表示されるたび(`OnAppearing`)にデータを読み直す。ほかの画面での変更(カテゴリ名の変更など)を反映するため。
+Each screen reloads its data every time it appears (`OnAppearing`), so that changes made on other screens (such as renaming a category) are reflected.
 
-## データ設計
+## Data design
 
-### 共通ルール
+### Common rules
 
-同期に備え、すべてのテーブルが次の列を持つ。
+To prepare for sync, every table has the following columns.
 
-| 列 | 型 | 説明 |
+| Column | Type | Description |
 |---|---|---|
-| `id` | TEXT(UUID) | 主キー。オフラインで作成しても衝突しないよう UUID にする |
-| `user_id` | TEXT | 所有者。ログイン実装までは固定値 `local` |
-| `updated_at` | INTEGER | 最終更新時刻(UTC の Unix 時刻、ミリ秒)。競合解決に使う |
-| `version` | INTEGER | 作成時 1、更新のたびに 1 増える |
-| `deleted` | INTEGER(0/1) | 論理削除フラグ。削除を他端末へ伝えるため、行は物理削除しない |
+| `id` | TEXT (UUID) | Primary key. A UUID, so that rows created offline do not collide |
+| `user_id` | TEXT | Owner. A fixed value `local` until sign-in is implemented |
+| `updated_at` | INTEGER | Last update time (UTC Unix time in milliseconds). Used to resolve conflicts |
+| `version` | INTEGER | 1 when created, incremented on every update |
+| `deleted` | INTEGER (0/1) | Soft delete flag. Rows are never physically deleted, so that deletions can be sent to other devices |
 
-- 金額は **円単位の整数**(`long`)で持つ。小数は扱わない
-- 日付は `yyyy-MM-dd` の文字列で持つ。文字列の大小比較で期間検索できる
+- Amounts are stored as **integers in yen** (`long`). Fractions are not supported
+- Dates are stored as `yyyy-MM-dd` strings, so a period can be searched by string comparison
 
-### テーブル
+### Tables
 
 ```mermaid
 erDiagram
@@ -127,7 +129,7 @@ erDiagram
     categories {
         TEXT id PK
         TEXT user_id
-        INTEGER kind "0=支出 1=収入"
+        INTEGER kind "0=expense 1=income"
         TEXT name
         INTEGER sort_order
         INTEGER updated_at
@@ -138,8 +140,8 @@ erDiagram
         TEXT id PK
         TEXT user_id
         TEXT date "yyyy-MM-dd"
-        INTEGER kind "0=支出 1=収入"
-        INTEGER amount "円"
+        INTEGER kind "0=expense 1=income"
+        INTEGER amount "yen"
         TEXT category_id FK
         TEXT memo
         INTEGER updated_at
@@ -148,81 +150,81 @@ erDiagram
     }
 ```
 
-制約(アプリ側で検証する):
+Constraints (validated by the app):
 
-- 明細の金額は 1 円以上
-- 明細のカテゴリは本人のもので、明細と同じ種類(支出/収入)であること。論理削除済みのカテゴリでもよい(削除前に登録した明細を編集できるように)
-- カテゴリ名は、同じ種類の有効なカテゴリの中で重複しない
+- A transaction's amount is at least 1 yen
+- A transaction's category belongs to the same user and has the same kind (expense/income) as the transaction. Soft-deleted categories are allowed, so that transactions registered before the deletion can still be edited
+- Category names are unique among the active categories of the same kind
 
-### スキーマの版とマイグレーション
+### Schema versions and migrations
 
-スキーマの版は SQLite の `PRAGMA user_version` で管理し、`KakeiboDatabase` が初回アクセス時に最新まで上げる。
+The schema version is managed with SQLite's `PRAGMA user_version`. `KakeiboDatabase` upgrades the database to the latest version on first access.
 
-| 版 | 内容 |
+| Version | Changes |
 |---|---|
-| 0 | 明細がカテゴリ名を文字列(`category` 列)で直接持つ |
-| 1 | `categories` テーブルを追加し、明細は `category_id` で参照する。既存のカテゴリ名は、標準カテゴリの同名のものに寄せ、なければ新しいカテゴリとして移す |
+| 0 | Transactions store the category name directly as a string (`category` column) |
+| 1 | Adds the `categories` table; transactions reference it by `category_id`. Existing category names are mapped to the default category with the same name, or moved to a new category if there is none |
 
-## 集計
+## Aggregation
 
-集計は `Kakeibo.Core` の純粋な関数として実装し、単体テストで検証している。
+Aggregation is implemented as pure functions in `Kakeibo.Core` and verified by unit tests.
 
-| 集計 | クラス | 内容 |
+| Aggregation | Class | Description |
 |---|---|---|
-| 帳簿 | `MonthlyLedger` | 1 か月の明細を古い順に並べ、前月繰越から残高を積み上げる |
-| 年間推移 | `YearlySummary` | 月ごとの収入・支出・差額・月末残高と年間合計 |
-| カテゴリ別内訳 | `CategoryBreakdown` | カテゴリごとの合計と割合(金額の大きい順) |
+| Ledger | `MonthlyLedger` | Sorts a month's transactions from oldest to newest and accumulates the balance from the carryover |
+| Yearly summary | `YearlySummary` | Income, expenses, difference, and month-end balance for each month, plus yearly totals |
+| Category breakdown | `CategoryBreakdown` | Total and share per category (largest amount first) |
 
-繰越残高(ある日付より前の全明細の収支の累計)は、SQL の集計(`GetBalanceBeforeAsync`)で求める。
+The carryover balance (the net total of all transactions before a given date) is calculated with a SQL aggregate (`GetBalanceBeforeAsync`).
 
-> 方針では集計は API 側に寄せる。今はオフラインで動かすためデスクトップ側で計算している。API を作る段階で、どちらで計算するかを決める(未決事項を参照)。
+> The principle is to keep aggregation on the API side. For now it runs on the desktop so that the app works offline. Where to calculate it will be decided when the API is built (see Open questions).
 
-## 同期(未実装)
+## Sync (not implemented)
 
-- 同期 API は 2 本
-  - **push**: 端末の変更をサーバーへ送る
-  - **pull**: 前回同期時刻以降の変更を取得する
-- 競合は **最終更新が新しい方を採用**(Last Write Wins)。同じ明細を複数端末で同時に編集することは少ないため、これで十分とする
+- Two sync APIs
+  - **push**: send changes from the device to the server
+  - **pull**: fetch changes since the last sync
+- Conflicts are resolved by **taking the most recently updated row** (Last Write Wins). The same transaction is rarely edited on several devices at once, so this is sufficient
 
-## 認証(未実装)
+## Authentication (not implemented)
 
-- 自作せず、**マネージドな認証サービス** を使う(Auth0、Supabase Auth、Cognito など。DB 選定後に決定)
-- 方式は **OAuth2/OIDC(PKCE)** のブラウザ経由ログイン
-  1. 認証サービスの画面でログインし、JWT を受け取る
-  2. アプリはトークンを保存する
-  3. API はリクエストごとにトークンを検証し、`user_id` を取り出す
-- ソーシャルログイン(Google など)を検討する
-- 退会(データ削除)の導線を用意する
-- デスクトップでは、ログインを実装するまで `ICurrentUser` の実装として `LocalUser`(`user_id = "local"`)を使う
+- Use a **managed auth service** instead of building one (Auth0, Supabase Auth, Cognito, etc. To be decided after choosing the DB)
+- Browser-based sign-in with **OAuth2/OIDC (PKCE)**
+  1. Sign in on the auth service's page and receive a JWT
+  2. The app stores the token
+  3. The API verifies the token on every request and extracts the `user_id`
+- Consider social sign-in (Google, etc.)
+- Provide a way to delete the account (and its data)
+- Until sign-in is implemented, the desktop app uses `LocalUser` (`user_id = "local"`) as its `ICurrentUser`
 
-## 配布(未実装)
+## Distribution (not implemented)
 
-- 最初は **zip 配布**(self-contained 発行)
-- 配布相手が増えたら **MSIX** か **Inno Setup** を検討する
-- 署名(Windows のコード署名、Mac の署名・公証)は公開範囲が広がる段階で対応する。身内配布では署名なしの警告が出ることを事前に伝える
+- Start with **zip distribution** (self-contained publish)
+- Consider **MSIX** or **Inno Setup** as the number of users grows
+- Code signing (Windows code signing, Mac signing and notarization) will be handled when the app is made widely available. When sharing with friends and family, tell them in advance about the unsigned-app warning
 
-## マイルストーン
+## Milestones
 
-仕様の当初の順序は「認証 → API → デスクトップ」だったが、デスクトップから先に作っている。
+The original order was "auth → API → desktop", but the desktop app is being built first.
 
-- [x] デスクトップ: 明細の CRUD(ローカル SQLite)
-- [x] デスクトップ: カテゴリ管理、集計画面
-- [ ] 認証サービスを選定し、React でログイン・ログアウトを通す
-- [ ] ASP.NET Core で、トークン検証と `user_id` の取得ができる API を作る
-- [ ] 明細の CRUD API と DB を作り、Web で動かす
-- [ ] デスクトップにログインを追加し、API に接続する
-- [ ] push/pull の同期を実装する
-- [ ] GitHub Actions で Windows/Mac のビルドを通す(手戻りを防ぐため早めに一度通す)
-- [ ] zip で身内に配布する
+- [x] Desktop: transaction CRUD (local SQLite)
+- [x] Desktop: category management, reports screen
+- [ ] Choose an auth service and get sign-in/sign-out working in React
+- [ ] Build an ASP.NET Core API that verifies tokens and extracts `user_id`
+- [ ] Build the transaction CRUD API and DB, and get it working on the web
+- [ ] Add sign-in to the desktop app and connect it to the API
+- [ ] Implement push/pull sync
+- [ ] Get Windows/Mac builds passing on GitHub Actions (do this early once, to avoid rework)
+- [ ] Distribute as a zip to friends and family
 
-## 未決事項
+## Open questions
 
-| 項目 | メモ |
+| Item | Notes |
 |---|---|
-| クラウド DB の選定 | Supabase の無料枠は 1 週間放置で停止するため、公開時は Pro 移行か別サービスを検討する |
-| 認証サービスの選定 | DB 次第 |
-| 集計の計算場所 | 現在はデスクトップ側(Core)。API 側に寄せる方針との整理が必要 |
-| 標準カテゴリの重複 | 標準カテゴリは端末ごとに別の UUID で登録されるため、同期すると同名のカテゴリが重複する。同期の実装時に対策する |
-| スマホ(iOS/Android)対応 | 有無と時期 |
-| 有料化の方式 | サブスクか買い切りか |
-| グラフ・一覧表示のライブラリ | 今は MAUI 標準の ProgressBar で簡易的な棒グラフを描いている |
+| Choice of cloud DB | Supabase's free tier pauses after a week of inactivity, so at launch either move to Pro or consider another service |
+| Choice of auth service | Depends on the DB |
+| Where to calculate aggregation | Currently on the desktop (Core). Needs to be reconciled with the principle of keeping it on the API side |
+| Duplicate default categories | Default categories get a different UUID on each device, so syncing creates duplicate categories with the same name. Address this when implementing sync |
+| Mobile (iOS/Android) support | Whether and when |
+| Monetization | Subscription or one-time purchase |
+| Chart and list libraries | For now, simple bar charts are drawn with the standard MAUI ProgressBar |
